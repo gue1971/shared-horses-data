@@ -1,15 +1,8 @@
 {
-  "meta": {
-    "generated_at": "2026-02-18T04:39:32.108Z",
-    "reverse_import_clubs": [
-      "union",
-      "normandy"
-    ]
-  },
   "horses": [
     {
       "slug": "resistencia24",
-      "name": "レシステンシア2024",
+      "name": "レシステンシア24",
       "club": "carrot",
       "sire": "モーリス",
       "dam": "レシステンシア",
