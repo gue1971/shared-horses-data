@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>shared-horses-data editor</title>
+  <style>
+    :root {
+      --bg: #0f1219;
+      --panel: #171d28;
+      --line: #2a3447;
+      --text: #e8edf7;
+      --muted: #9ca8bd;
+      --accent: #6ed0ff;
+      --danger: #ff6e86;
+      --ok: #8ee090;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 15% -10%, #21324f, var(--bg));
+    }
+    .wrap {
+      width: min(1400px, 97vw);
+      margin: 16px auto 24px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(20px, 2.8vw, 30px);
+      letter-spacing: .02em;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: color-mix(in oklab, var(--panel), black 12%);
+      margin-bottom: 10px;
+    }
+    button {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #111722;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover { border-color: #46618b; }
+    .primary { background: #17304d; border-color: #355c8f; }
+    .danger { background: #3b1c27; border-color: #7c3044; }
+    #q {
+      min-width: 260px;
+      flex: 1;
+      max-width: 560px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0f141e;
+      color: var(--text);
+      padding: 8px 10px;
+    }
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 10px;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #172235;
+      color: #c4d2eb;
+      font-size: 12px;
+    }
+    .chip.ok { border-color: #2d5f3f; background: #173025; color: #b6f0c5; }
+    .chip.warn { border-color: #7b5a2f; background: #382b16; color: #f4d9a7; }
+
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: auto;
+      background: rgba(11, 14, 20, .76);
+      max-height: 75vh;
+    }
+    table {
+      border-collapse: collapse;
+      min-width: 1500px;
+      width: 100%;
+    }
+    th, td {
+      border-bottom: 1px solid #212a39;
+      border-right: 1px solid #1d2634;
+      padding: 6px;
+      vertical-align: top;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #131b29;
+      z-index: 2;
+      font-size: 12px;
+      color: #b7c6e2;
+      white-space: nowrap;
+    }
+    td { min-width: 140px; }
+    td.actions {
+      min-width: 70px;
+      text-align: center;
+      position: sticky;
+      left: 0;
+      background: #101722;
+      z-index: 1;
+    }
+    th.actions {
+      left: 0;
+      z-index: 3;
+      background: #121b2a;
+    }
+    input.cell {
+      width: 100%;
+      border: 1px solid #283247;
+      border-radius: 8px;
+      background: #0d131e;
+      color: var(--text);
+      padding: 6px 7px;
+      font-size: 12px;
+      min-height: 32px;
+    }
+    .muted { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>shared-horses-data editor</h1>
+
+    <section class="toolbar">
+      <button id="reload" type="button">再読込</button>
+      <button id="add-row" class="primary" type="button">行を追加</button>
+      <button id="add-col" type="button">項目を追加</button>
+      <button id="export" class="primary" type="button">JSONエクスポート</button>
+      <input id="q" type="search" placeholder="検索（name, horse_id, sire, dam, trainer...）" />
+    </section>
+
+    <div class="meta" id="meta"></div>
+    <p class="muted">注意: この画面の編集はブラウザ内のみです。保存は「JSONエクスポート」で行い、`horses.json` を置き換えてください。</p>
+
+    <section class="table-wrap">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const PRIORITY_COLUMNS = [
+      'name', 'horse_id', 'local_id', 'club', 'career_status', 'slug',
+      'birth', 'training_center', 'trainer', 'stable', 'sire', 'dam', 'damsire',
+      'studbook_num', 'netkeiba_horse_id', 'jra_id', 'jbis_id',
+      'price', 'farm', 'clubPage', 'tab',
+      'height_cm', 'girth_cm', 'cannon_cm', 'weight_kg'
+    ];
+    const NUMERIC_FIELDS = new Set(['height_cm', 'girth_cm', 'cannon_cm', 'weight_kg', 'tab']);
+
+    const state = {
+      sourceKind: 'array',
+      horses: [],
+      columns: [],
+      q: '',
+      dirty: false,
+    };
+
+    const $ = (s) => document.querySelector(s);
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function displayValue(v) {
+      if (v === null || v === undefined) return '';
+      return String(v);
+    }
+
+    function parseInput(field, raw) {
+      const trimmed = raw.trim();
+      if (NUMERIC_FIELDS.has(field)) {
+        if (trimmed === '') return null;
+        const n = Number(trimmed);
+        return Number.isFinite(n) ? n : trimmed;
+      }
+      return trimmed;
+    }
+
+    function deriveColumns(horses) {
+      const set = new Set();
+      horses.forEach(h => Object.keys(h).forEach(k => set.add(k)));
+      const others = [...set].filter(k => !PRIORITY_COLUMNS.includes(k)).sort();
+      return [...PRIORITY_COLUMNS.filter(k => set.has(k)), ...others];
+    }
+
+    function filteredRows() {
+      const q = state.q.trim().toLowerCase();
+      if (!q) return state.horses;
+      return state.horses.filter(h =>
+        state.columns.some(c => String(h[c] ?? '').toLowerCase().includes(q))
+      );
+    }
+
+    function renderMeta(viewRows) {
+      const dirty = state.dirty
+        ? '<span class="chip warn">未保存の変更あり</span>'
+        : '<span class="chip ok">保存済み状態</span>';
+      const chips = [
+        `<span class="chip">表示: ${viewRows.length} / 全体: ${state.horses.length}</span>`,
+        `<span class="chip">項目数: ${state.columns.length}</span>`,
+        dirty,
+      ];
+      $('#meta').innerHTML = chips.join('');
+    }
+
+    function renderTable() {
+      const rows = filteredRows();
+      const thead = $('#thead');
+      const tbody = $('#tbody');
+
+      const headCols = state.columns.map(c => `<th>${escapeHtml(c)}</th>`).join('');
+      thead.innerHTML = `<tr><th class="actions">操作</th>${headCols}</tr>`;
+
+      tbody.innerHTML = rows.map((row) => {
+        const realIndex = state.horses.indexOf(row);
+        const cols = state.columns.map((c) => {
+          const value = escapeHtml(displayValue(row[c]));
+          return `<td><input class="cell" data-row="${realIndex}" data-col="${escapeHtml(c)}" value="${value}" /></td>`;
+        }).join('');
+
+        return `
+          <tr>
+            <td class="actions">
+              <button class="danger" type="button" data-del="${realIndex}">削除</button>
+            </td>
+            ${cols}
+          </tr>
+        `;
+      }).join('');
+
+      renderMeta(rows);
+    }
+
+    function markDirty() {
+      state.dirty = true;
+    }
+
+    function addRow() {
+      const row = {};
+      state.columns.forEach((c) => {
+        row[c] = NUMERIC_FIELDS.has(c) ? null : '';
+      });
+      state.horses.push(row);
+      markDirty();
+      renderTable();
+    }
+
+    function addColumn() {
+      const name = prompt('追加する項目名を入力してください（例: memo）');
+      if (!name) return;
+      const col = name.trim();
+      if (!col) return;
+      if (state.columns.includes(col)) {
+        alert('その項目は既に存在します');
+        return;
+      }
+      state.columns.push(col);
+      state.horses.forEach((h) => { h[col] = ''; });
+      markDirty();
+      renderTable();
+    }
+
+    function deleteRow(index) {
+      const row = state.horses[index];
+      const label = row?.name || row?.horse_id || `row:${index}`;
+      if (!confirm(`削除しますか？\n${label}`)) return;
+      state.horses.splice(index, 1);
+      markDirty();
+      renderTable();
+    }
+
+    function toExportDoc() {
+      if (state.sourceKind === 'array') return state.horses;
+      return { horses: state.horses };
+    }
+
+    function exportJson() {
+      const doc = toExportDoc();
+      const blob = new Blob([`${JSON.stringify(doc, null, 2)}\n`], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'horses.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      state.dirty = false;
+      renderTable();
+    }
+
+    function bindEvents() {
+      $('#q').addEventListener('input', (e) => {
+        state.q = e.target.value;
+        renderTable();
+      });
+
+      $('#reload').addEventListener('click', () => {
+        if (state.dirty && !confirm('未保存の変更があります。再読込しますか？')) return;
+        boot();
+      });
+
+      $('#add-row').addEventListener('click', addRow);
+      $('#add-col').addEventListener('click', addColumn);
+      $('#export').addEventListener('click', exportJson);
+
+      $('#tbody').addEventListener('input', (e) => {
+        const t = e.target;
+        if (!(t instanceof HTMLInputElement)) return;
+        const row = Number(t.dataset.row);
+        const col = t.dataset.col;
+        if (!Number.isInteger(row) || !col) return;
+        state.horses[row][col] = parseInput(col, t.value);
+        markDirty();
+      });
+
+      $('#tbody').addEventListener('click', (e) => {
+        const t = e.target;
+        if (!(t instanceof HTMLElement)) return;
+        const del = t.getAttribute('data-del');
+        if (del == null) return;
+        deleteRow(Number(del));
+      });
+    }
+
+    async function loadHorses() {
+      const res = await fetch('./horses.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`horses.json: ${res.status}`);
+      const doc = await res.json();
+      if (Array.isArray(doc)) {
+        state.sourceKind = 'array';
+        return doc;
+      }
+      if (doc && Array.isArray(doc.horses)) {
+        state.sourceKind = 'object';
+        return doc.horses;
+      }
+      throw new Error('horses.json の形式が不正です');
+    }
+
+    async function boot() {
+      try {
+        state.horses = await loadHorses();
+        state.columns = deriveColumns(state.horses);
+        state.q = '';
+        state.dirty = false;
+        $('#q').value = '';
+        renderTable();
+      } catch (err) {
+        $('#thead').innerHTML = '';
+        $('#tbody').innerHTML = `<tr><td>読み込み失敗: ${escapeHtml(String(err.message || err))}</td></tr>`;
+      }
+    }
+
+    bindEvents();
+    boot();
+  </script>
+</body>
+</html>
