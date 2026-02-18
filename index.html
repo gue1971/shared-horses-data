@@ -122,15 +122,75 @@
       z-index: 3;
       background: #121b2a;
     }
-    input.cell {
+    td.cell-readonly {
+      color: #9fb6d8;
+      background: rgba(98, 131, 179, 0.08);
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 9, 14, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 40;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: min(760px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #101722;
+      padding: 14px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6);
+    }
+    .modal h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+    .form-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .form-item {
+      display: grid;
+      gap: 4px;
+    }
+    .form-item.wide { grid-column: 1 / -1; }
+    .form-item label {
+      font-size: 12px;
+      color: #b7c6e2;
+    }
+    .form-item input,
+    .form-item select {
       width: 100%;
       border: 1px solid #283247;
       border-radius: 8px;
       background: #0d131e;
       color: var(--text);
-      padding: 6px 7px;
-      font-size: 12px;
-      min-height: 32px;
+      padding: 8px 9px;
+      font-size: 13px;
+      min-height: 34px;
+    }
+    .form-item .readonly-value {
+      border: 1px solid #32415a;
+      border-radius: 8px;
+      background: #151f2e;
+      color: #b6c6df;
+      padding: 8px 9px;
+      font-size: 13px;
+      min-height: 34px;
+      word-break: break-all;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
     }
     .muted { color: var(--muted); font-size: 12px; }
   </style>
@@ -142,7 +202,6 @@
     <section class="toolbar">
       <button id="reload" type="button">再読込</button>
       <button id="add-row" class="primary" type="button">行を追加</button>
-      <button id="add-col" type="button">項目を追加</button>
       <button id="export" class="primary" type="button">JSONエクスポート</button>
       <input id="q" type="search" placeholder="検索（name, horse_id, sire, dam, trainer...）" />
     </section>
@@ -157,16 +216,33 @@
       </table>
     </section>
   </main>
+  <div id="edit-modal-wrap" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="modal">
+      <h2 id="edit-modal-title">馬情報を編集</h2>
+      <form id="edit-form">
+        <div id="edit-form-grid" class="form-grid"></div>
+        <div class="modal-actions">
+          <button id="cancel-edit" type="button">キャンセル</button>
+          <button class="primary" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
-    const PRIORITY_COLUMNS = [
-      'name', 'horse_id', 'local_id', 'club', 'career_status', 'slug',
-      'birth', 'training_center', 'trainer', 'stable', 'sire', 'dam', 'damsire',
-      'studbook_num', 'netkeiba_horse_id', 'jra_id', 'jbis_id',
-      'price', 'farm', 'clubPage', 'tab',
-      'height_cm', 'girth_cm', 'cannon_cm', 'weight_kg'
+    const FIELD_ORDER = [
+      'slug', 'name', 'sire', 'dam', 'damsire',
+      'birth', 'price', 'training_center', 'trainer', 'farm',
+      'height_cm', 'girth_cm', 'cannon_cm', 'weight_kg',
+      'club', 'clubPage', 'local_id', 'career_status',
+      'jra_id', 'jbis_id', 'studbook_num', 'tab',
+      'stable', 'netkeiba_horse_id', 'horse_id'
     ];
     const NUMERIC_FIELDS = new Set(['height_cm', 'girth_cm', 'cannon_cm', 'weight_kg', 'tab']);
+    const NON_EDITABLE_FIELDS = new Set(['stable', 'netkeiba_horse_id', 'horse_id']);
+    const TRAINING_CENTER_OPTIONS_BASE = ['', '美浦', '栗東', '地方', '海外'];
+    const CLUB_OPTIONS_BASE = ['', 'carrot', 'silk', 'tokyo', 'win', 'union', 'normandy'];
+    const CAREER_STATUS_OPTIONS_BASE = ['', 'active', 'retired'];
 
     const state = {
       sourceKind: 'array',
@@ -174,6 +250,7 @@
       columns: [],
       q: '',
       dirty: false,
+      editingRowIndex: null,
     };
 
     const $ = (s) => document.querySelector(s);
@@ -202,11 +279,73 @@
       return trimmed;
     }
 
+    function mergedOptions(baseOptions, dataValues, currentValue) {
+      const set = new Set(baseOptions);
+      dataValues.forEach((v) => set.add(displayValue(v).trim()));
+      set.add(displayValue(currentValue).trim());
+      return [...set].filter(v => v !== '').sort((a, b) => a.localeCompare(b, 'ja'));
+    }
+
+    function buildLegacyFields(src) {
+      const trainingCenter = displayValue(src.training_center).trim();
+      const trainer = displayValue(src.trainer).trim();
+      const studbookNum = displayValue(src.studbook_num).trim();
+      const club = displayValue(src.club).trim();
+      const localId = displayValue(src.local_id).trim();
+
+      const stable = trainingCenter && trainer
+        ? `${trainingCenter}　${trainer}`
+        : (trainingCenter || trainer);
+      const horseId = club && localId
+        ? `${club}_${localId}`
+        : (club ? `${club}_` : (localId ? `_${localId}` : ''));
+
+      return {
+        stable,
+        netkeiba_horse_id: studbookNum,
+        horse_id: horseId,
+      };
+    }
+
+    function formControl(name) {
+      const form = $('#edit-form');
+      return form?.elements?.namedItem(name) || null;
+    }
+
+    function formValue(name) {
+      const control = formControl(name);
+      if (!control || !('value' in control)) return '';
+      return String(control.value || '').trim();
+    }
+
+    function updateReadonlyField(field, value) {
+      const target = document.querySelector(`[data-readonly-field="${field}"]`);
+      if (!target) return;
+      if (!value) {
+        target.innerHTML = '&nbsp;';
+        return;
+      }
+      target.textContent = value;
+    }
+
+    function refreshLegacyPreviewFromForm() {
+      const legacy = buildLegacyFields({
+        training_center: formValue('training_center'),
+        trainer: formValue('trainer'),
+        studbook_num: formValue('studbook_num'),
+        club: formValue('club'),
+        local_id: formValue('local_id'),
+      });
+      updateReadonlyField('stable', legacy.stable);
+      updateReadonlyField('netkeiba_horse_id', legacy.netkeiba_horse_id);
+      updateReadonlyField('horse_id', legacy.horse_id);
+    }
+
     function deriveColumns(horses) {
       const set = new Set();
       horses.forEach(h => Object.keys(h).forEach(k => set.add(k)));
-      const others = [...set].filter(k => !PRIORITY_COLUMNS.includes(k)).sort();
-      return [...PRIORITY_COLUMNS.filter(k => set.has(k)), ...others];
+      const others = [...set].filter(k => !FIELD_ORDER.includes(k)).sort();
+      return [...FIELD_ORDER.filter(k => set.has(k)), ...others];
     }
 
     function filteredRows() {
@@ -241,12 +380,14 @@
         const realIndex = state.horses.indexOf(row);
         const cols = state.columns.map((c) => {
           const value = escapeHtml(displayValue(row[c]));
-          return `<td><input class="cell" data-row="${realIndex}" data-col="${escapeHtml(c)}" value="${value}" /></td>`;
+          const cellClass = NON_EDITABLE_FIELDS.has(c) ? ' class="cell-readonly"' : '';
+          return `<td${cellClass}>${value}</td>`;
         }).join('');
 
         return `
           <tr>
             <td class="actions">
+              <button type="button" data-edit="${realIndex}">編集</button>
               <button class="danger" type="button" data-del="${realIndex}">削除</button>
             </td>
             ${cols}
@@ -263,25 +404,9 @@
 
     function addRow() {
       const row = {};
-      state.columns.forEach((c) => {
-        row[c] = NUMERIC_FIELDS.has(c) ? null : '';
-      });
-      state.horses.push(row);
-      markDirty();
-      renderTable();
-    }
-
-    function addColumn() {
-      const name = prompt('追加する項目名を入力してください（例: memo）');
-      if (!name) return;
-      const col = name.trim();
-      if (!col) return;
-      if (state.columns.includes(col)) {
-        alert('その項目は既に存在します');
-        return;
-      }
-      state.columns.push(col);
-      state.horses.forEach((h) => { h[col] = ''; });
+      const allColumns = state.columns.length > 0 ? state.columns : FIELD_ORDER;
+      allColumns.forEach((c) => { row[c] = NUMERIC_FIELDS.has(c) ? null : ''; });
+      state.horses.unshift(row);
       markDirty();
       renderTable();
     }
@@ -300,7 +425,23 @@
       return { horses: state.horses };
     }
 
+    function normalizeRowOrder(row) {
+      const out = {};
+      state.columns.forEach((k) => {
+        if (Object.prototype.hasOwnProperty.call(row, k)) {
+          out[k] = row[k];
+          return;
+        }
+        out[k] = NUMERIC_FIELDS.has(k) ? null : '';
+      });
+      Object.keys(row).forEach((k) => {
+        if (!Object.prototype.hasOwnProperty.call(out, k)) out[k] = row[k];
+      });
+      return out;
+    }
+
     function exportJson() {
+      state.horses = state.horses.map(normalizeRowOrder);
       const doc = toExportDoc();
       const blob = new Blob([`${JSON.stringify(doc, null, 2)}\n`], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -310,6 +451,124 @@
       a.click();
       URL.revokeObjectURL(url);
       state.dirty = false;
+      renderTable();
+    }
+
+    function isWideField(field) {
+      return ['clubPage', 'jra_id', 'jbis_id', 'netkeiba_horse_id', 'horse_id', 'slug', 'name'].includes(field);
+    }
+
+    function openEditModal(rowIndex) {
+      const row = state.horses[rowIndex];
+      if (!row) return;
+      state.editingRowIndex = rowIndex;
+      $('#edit-modal-title').textContent = `馬情報を編集: ${row.name || row.horse_id || row.slug || `row:${rowIndex}`}`;
+
+      const html = state.columns.map((field) => {
+        const label = escapeHtml(field);
+        const value = escapeHtml(displayValue(row[field]));
+        const wide = isWideField(field) ? ' wide' : '';
+        if (NON_EDITABLE_FIELDS.has(field)) {
+          return `
+            <div class="form-item${wide}">
+              <label>${label}（編集不可）</label>
+              <div class="readonly-value" data-readonly-field="${label}">${value || '&nbsp;'}</div>
+            </div>
+          `;
+        }
+        if (field === 'training_center') {
+          const options = mergedOptions(
+            TRAINING_CENTER_OPTIONS_BASE,
+            state.horses.map(h => h.training_center),
+            row[field]
+          ).map((opt) => {
+            const selected = (displayValue(row[field]) === opt) ? ' selected' : '';
+            return `<option value="${escapeHtml(opt)}"${selected}>${escapeHtml(opt)}</option>`;
+          }).join('');
+          const emptySelected = displayValue(row[field]) === '' ? ' selected' : '';
+          return `
+            <div class="form-item${wide}">
+              <label>${label}</label>
+              <select name="${escapeHtml(field)}">
+                <option value=""${emptySelected}>未設定</option>
+                ${options}
+              </select>
+            </div>
+          `;
+        }
+        if (field === 'club') {
+          const options = mergedOptions(
+            CLUB_OPTIONS_BASE,
+            state.horses.map(h => h.club),
+            row[field]
+          ).map((opt) => {
+            const selected = (displayValue(row[field]) === opt) ? ' selected' : '';
+            return `<option value="${escapeHtml(opt)}"${selected}>${escapeHtml(opt)}</option>`;
+          }).join('');
+          const emptySelected = displayValue(row[field]) === '' ? ' selected' : '';
+          return `
+            <div class="form-item${wide}">
+              <label>${label}</label>
+              <select name="${escapeHtml(field)}">
+                <option value=""${emptySelected}>未設定</option>
+                ${options}
+              </select>
+            </div>
+          `;
+        }
+        if (field === 'career_status') {
+          const options = mergedOptions(
+            CAREER_STATUS_OPTIONS_BASE,
+            state.horses.map(h => h.career_status),
+            row[field]
+          ).map((opt) => {
+            const selected = (displayValue(row[field]) === opt) ? ' selected' : '';
+            return `<option value="${escapeHtml(opt)}"${selected}>${escapeHtml(opt)}</option>`;
+          }).join('');
+          const emptySelected = displayValue(row[field]) === '' ? ' selected' : '';
+          return `
+            <div class="form-item${wide}">
+              <label>${label}</label>
+              <select name="${escapeHtml(field)}">
+                <option value=""${emptySelected}>未設定</option>
+                ${options}
+              </select>
+            </div>
+          `;
+        }
+        return `
+          <div class="form-item${wide}">
+            <label>${label}</label>
+            <input name="${escapeHtml(field)}" value="${value}" />
+          </div>
+        `;
+      }).join('');
+
+      $('#edit-form-grid').innerHTML = html;
+      refreshLegacyPreviewFromForm();
+      $('#edit-modal-wrap').classList.add('open');
+    }
+
+    function closeEditModal() {
+      state.editingRowIndex = null;
+      $('#edit-modal-wrap').classList.remove('open');
+      $('#edit-form-grid').innerHTML = '';
+    }
+
+    function saveEditModal() {
+      const rowIndex = state.editingRowIndex;
+      if (!Number.isInteger(rowIndex)) return;
+      const row = state.horses[rowIndex];
+      if (!row) return;
+      const formData = new FormData($('#edit-form'));
+      state.columns.forEach((field) => {
+        if (NON_EDITABLE_FIELDS.has(field)) return;
+        const raw = formData.get(field);
+        row[field] = parseInput(field, raw == null ? '' : String(raw));
+      });
+      Object.assign(row, buildLegacyFields(row));
+      markDirty();
+      closeEditModal();
       renderTable();
     }
 
@@ -325,25 +584,30 @@
       });
 
       $('#add-row').addEventListener('click', addRow);
-      $('#add-col').addEventListener('click', addColumn);
       $('#export').addEventListener('click', exportJson);
-
-      $('#tbody').addEventListener('input', (e) => {
-        const t = e.target;
-        if (!(t instanceof HTMLInputElement)) return;
-        const row = Number(t.dataset.row);
-        const col = t.dataset.col;
-        if (!Number.isInteger(row) || !col) return;
-        state.horses[row][col] = parseInput(col, t.value);
-        markDirty();
-      });
 
       $('#tbody').addEventListener('click', (e) => {
         const t = e.target;
         if (!(t instanceof HTMLElement)) return;
+        const edit = t.getAttribute('data-edit');
+        if (edit != null) {
+          openEditModal(Number(edit));
+          return;
+        }
         const del = t.getAttribute('data-del');
         if (del == null) return;
         deleteRow(Number(del));
+      });
+
+      $('#cancel-edit').addEventListener('click', closeEditModal);
+      $('#edit-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveEditModal();
+      });
+      $('#edit-form').addEventListener('input', refreshLegacyPreviewFromForm);
+      $('#edit-form').addEventListener('change', refreshLegacyPreviewFromForm);
+      $('#edit-modal-wrap').addEventListener('click', (e) => {
+        if (e.target === $('#edit-modal-wrap')) closeEditModal();
       });
     }
 
