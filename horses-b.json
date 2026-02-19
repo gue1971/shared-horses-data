@@ -450,14 +450,14 @@
       "club": "tokyo",
       "clubPage": "runners/2837",
       "local_id": "2837",
-      "career_status": "retired",
+      "career_status": "active",
       "jra_id": "",
       "jbis_id": "0001375182",
       "studbook_num": "2023106622",
       "tab": 2,
       "stable": "栗東　武幸四郎",
       "netkeiba_horse_id": "2023106622",
-      "horse_id": "tokyo_2837"
+      "horse_id": "tosara_2837"
     },
     {
       "slug": "daiwadesse23",
@@ -1317,7 +1317,6 @@
       "career_status": "retired",
       "jra_id": "pw01dud102016104568/2B",
       "jbis_id": "0001218073",
-      "studbook_num": "",
       "tab": 4,
       "stable": "美浦　大竹正博",
       "netkeiba_horse_id": "",
