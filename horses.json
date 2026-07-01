@@ -1,6 +1,60 @@
 {
   "horses": [
     {
+      "slug": "rougestiria25",
+      "name": "ルージュスティリアの25",
+      "sire": "エフフォーリア",
+      "dam": "ルージュスティリア",
+      "damsire": "ディープインパクト",
+      "birth": "2025.3.22",
+      "price": "2400万",
+      "training_center": "栗東",
+      "trainer": "藤原英昭",
+      "farm": "奥山ファーム",
+      "height_cm": 151.0,
+      "girth_cm": 172.0,
+      "cannon_cm": 20.0,
+      "weight_kg": 430,
+      "club": "tokyo",
+      "clubPage": "next/3033",
+      "local_id": "3033",
+      "career_status": "active",
+      "jra_id": "",
+      "jbis_id": "0001406325",
+      "studbook_num": "2025100262",
+      "tab": 1,
+      "stable": "栗東　藤原英昭",
+      "netkeiba_horse_id": "2025100262",
+      "horse_id": "tosara_3033"
+    },
+    {
+      "slug": "ladyoffifty25",
+      "name": "レディオブフィフティの25",
+      "sire": "ダノンキングリー",
+      "dam": "レディオブフィフティ",
+      "damsire": "After Market",
+      "birth": "2025.1.27",
+      "price": "3400万",
+      "training_center": "栗東",
+      "trainer": "大久保龍志",
+      "farm": "社台ファーム",
+      "height_cm": 162.0,
+      "girth_cm": 176.0,
+      "cannon_cm": 20.0,
+      "weight_kg": 433,
+      "club": "tokyo",
+      "clubPage": "next/3039",
+      "local_id": "3039",
+      "career_status": "active",
+      "jra_id": "",
+      "jbis_id": "0001414080",
+      "studbook_num": "2025106667",
+      "tab": 1,
+      "stable": "栗東　大久保龍志",
+      "netkeiba_horse_id": "2025106667",
+      "horse_id": "tosara_3039"
+    },
+    {
       "slug": "winalkanna24",
       "name": "ウインワーグナー",
       "sire": "フィエールマン",
@@ -22,7 +76,7 @@
       "jra_id": "pw01dud002024103053/64",
       "jbis_id": "0001396509",
       "studbook_num": "2024103053",
-      "tab": 1,
+      "tab": 2,
       "stable": "美浦　武市康男",
       "netkeiba_horse_id": "2024103053",
       "horse_id": "win_20240002"
@@ -49,7 +103,7 @@
       "jra_id": "",
       "jbis_id": "0001391917",
       "studbook_num": "2024106579",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　杉山晴紀",
       "netkeiba_horse_id": "2024106579",
       "horse_id": "silk_2024058"
@@ -76,7 +130,7 @@
       "jra_id": "",
       "jbis_id": "0001395807",
       "studbook_num": "2024106892",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　杉山晴紀",
       "netkeiba_horse_id": "2024106892",
       "horse_id": "tosara_2946"
@@ -103,7 +157,7 @@
       "jra_id": "",
       "jbis_id": "0001395766",
       "studbook_num": "2024106723",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　松下武士",
       "netkeiba_horse_id": "2024106723",
       "horse_id": "carrot_24062"
@@ -130,7 +184,7 @@
       "jra_id": "",
       "jbis_id": "0001396200",
       "studbook_num": "2024106532",
-      "tab": 1,
+      "tab": 2,
       "stable": "美浦　林徹",
       "netkeiba_horse_id": "2024106532",
       "horse_id": "carrot_24040"
@@ -157,7 +211,7 @@
       "jra_id": "",
       "jbis_id": "0001392433",
       "studbook_num": "2024106473",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　池江泰寿",
       "netkeiba_horse_id": "2024106473",
       "horse_id": "tosara_2947"
@@ -184,7 +238,7 @@
       "jra_id": "",
       "jbis_id": "0001392131",
       "studbook_num": "2024106734",
-      "tab": 1,
+      "tab": 2,
       "stable": "美浦　大竹正博",
       "netkeiba_horse_id": "2024106734",
       "horse_id": "tosara_2919"
@@ -211,7 +265,7 @@
       "jra_id": "",
       "jbis_id": "0001396423",
       "studbook_num": "2024106891",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　池江泰寿",
       "netkeiba_horse_id": "2024106891",
       "horse_id": "tosara_2936"
@@ -238,7 +292,7 @@
       "jra_id": "",
       "jbis_id": "0001395221",
       "studbook_num": "2024105903",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　奥村豊",
       "netkeiba_horse_id": "2024105903",
       "horse_id": "tosara_2933"
@@ -265,7 +319,7 @@
       "jra_id": "",
       "jbis_id": "0001419621",
       "studbook_num": "2024110014",
-      "tab": 1,
+      "tab": 2,
       "stable": "美浦　嘉藤貴行",
       "netkeiba_horse_id": "2024110014",
       "horse_id": "silk_2024043"
@@ -292,7 +346,7 @@
       "jra_id": "",
       "jbis_id": "0001391392",
       "studbook_num": "2024106683",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　斉藤崇史",
       "netkeiba_horse_id": "2024106683",
       "horse_id": "tosara_2944"
@@ -319,7 +373,7 @@
       "jra_id": "",
       "jbis_id": "0001390467",
       "studbook_num": "2024106283",
-      "tab": 1,
+      "tab": 2,
       "stable": "栗東　高橋亮",
       "netkeiba_horse_id": "2024106283",
       "horse_id": "carrot_24072"
@@ -346,7 +400,7 @@
       "jra_id": "pw01dud102023107275/E3",
       "jbis_id": "0001373109",
       "studbook_num": "2023107275",
-      "tab": 2,
+      "tab": 3,
       "stable": "美浦　田村康仁",
       "netkeiba_horse_id": "2023107275",
       "horse_id": "carrot_23039"
@@ -373,7 +427,7 @@
       "jra_id": "pw01dud002023107337/D3",
       "jbis_id": "0001369150",
       "studbook_num": "2023107337",
-      "tab": 2,
+      "tab": 3,
       "stable": "栗東　橋口慎介",
       "netkeiba_horse_id": "2023107337",
       "horse_id": "tosara_2852"
@@ -400,7 +454,7 @@
       "jra_id": "pw01dud002023106926/87",
       "jbis_id": "0001372811",
       "studbook_num": "2023106926",
-      "tab": 2,
+      "tab": 3,
       "stable": "栗東　高橋亮",
       "netkeiba_horse_id": "2023106926",
       "horse_id": "carrot_23065"
@@ -427,7 +481,7 @@
       "jra_id": "pw01dud102023103427/1F",
       "jbis_id": "0001375140",
       "studbook_num": "2023103427",
-      "tab": 2,
+      "tab": 3,
       "stable": "美浦　宮田敬介",
       "netkeiba_horse_id": "2023103427",
       "horse_id": "tosara_2803"
@@ -454,7 +508,7 @@
       "jra_id": "pw01dud002023103605/94",
       "jbis_id": "0001370107",
       "studbook_num": "2023103605",
-      "tab": 2,
+      "tab": 3,
       "stable": "栗東　須貝尚介",
       "netkeiba_horse_id": "2023103605",
       "horse_id": "tosara_2835"
@@ -481,7 +535,7 @@
       "jra_id": "pw01dud002023106617/57",
       "jbis_id": "0001370550",
       "studbook_num": "2023106617",
-      "tab": 2,
+      "tab": 3,
       "stable": "栗東　杉山晴紀",
       "netkeiba_horse_id": "2023106617",
       "horse_id": "tosara_2828"
